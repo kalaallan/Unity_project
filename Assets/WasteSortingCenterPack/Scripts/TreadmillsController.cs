@@ -2,45 +2,43 @@ using UnityEngine;
 
 public class TreadmillsController : MonoBehaviour
 {
-    [SerializeField] float maxTreadmillSpeed = 0.5f;
-    [SerializeField, Range(0, 1)] float targetSpeed = 0.5f;
     [SerializeField] Material treadmillMat;
     TreadmillForce[] treadmills;
     const float MATERIAL_SPEED_MULTIPLIER = 1f;
 
     [Header("Pause")]
     public bool isPaused { get; private set; }
-    float currentSpeed, refSpeed;
-    const float SPEED_SMOOTH = 0.2f;
+    private float currentSpeed;
 
     void Start()
     {
+        // On récupère tous les tapis
         treadmills = FindObjectsByType<TreadmillForce>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
     }
 
-    private void Update()
-    {
-        float effectiveTargetSpeed = targetSpeed;
-        if (isPaused)
-            effectiveTargetSpeed = 0;
+    // On supprime l'Update pour ne plus écraser la vitesse du levier
 
-        currentSpeed = Mathf.SmoothDamp(currentSpeed, effectiveTargetSpeed, ref refSpeed, SPEED_SMOOTH);
-        SetSpeed(currentSpeed);
-    }
-
-    public void SetSpeed(float speed01)
+    public void SetSpeed(float newSpeed)
     {
-        float speed = speed01 * maxTreadmillSpeed;
+        currentSpeed = isPaused ? 0 : newSpeed;
+
+        // On applique la vitesse physique à chaque tapis
         foreach (TreadmillForce t in treadmills)
         {
-            t.SetSpeed(speed);
+            if (t != null) t.SetSpeed(currentSpeed);
         }
 
-        treadmillMat.SetFloat("_Speed", speed * MATERIAL_SPEED_MULTIPLIER);
+        // On applique la vitesse visuelle au tapis (shader)
+        if (treadmillMat != null)
+        {
+            treadmillMat.SetFloat("_Speed", currentSpeed * MATERIAL_SPEED_MULTIPLIER);
+        }
     }
 
     public void SetPaused(bool value)
     {
         isPaused = value;
+        // On rafraîchit la vitesse actuelle (0 si pause)
+        SetSpeed(currentSpeed);
     }
 }

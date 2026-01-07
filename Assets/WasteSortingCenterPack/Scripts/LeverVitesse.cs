@@ -4,9 +4,10 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class LeverVitesse : MonoBehaviour
 {
-    public float vitesseLente = 1.5f, vitesseMoyenne = 3.0f, vitesseRapide = 5.0f;
+    public float vitesseLente = 0.5f, vitesseMoyenne = 1.2f, vitesseRapide = 2.0f;
     public float forceCran = 20f;
     public TreadmillForce[] allTreadmills;
+    public TreadmillsController mainController;
 
     private HingeJoint hinge;
     private XRGrabInteractable grab;
@@ -61,9 +62,9 @@ public class LeverVitesse : MonoBehaviour
         if (angle < -20f) speed = vitesseLente;
         else if (angle > 20f) speed = vitesseRapide;
 
-        foreach (TreadmillForce t in allTreadmills)
+        if (mainController != null)
         {
-            if (t != null) t.SetSpeed(speed);
+            mainController.SetSpeed(speed);
         }
     }
 }
