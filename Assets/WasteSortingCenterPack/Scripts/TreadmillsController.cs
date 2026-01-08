@@ -6,39 +6,61 @@ public class TreadmillsController : MonoBehaviour
     TreadmillForce[] treadmills;
     const float MATERIAL_SPEED_MULTIPLIER = 1f;
 
-    [Header("Pause")]
+    [Header("Pause State")]
     public bool isPaused { get; private set; }
-    private float currentSpeed;
+    private float lastRequestedSpeed; // On garde en mémoire la vitesse voulue par le levier
 
     void Start()
     {
-        // On récupère tous les tapis
         treadmills = FindObjectsByType<TreadmillForce>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        // On force l'arrêt visuel au démarrage au cas où le shader aurait une valeur résiduelle
+        if (treadmillMat != null) treadmillMat.SetFloat("_Speed", 0);
     }
-
-    // On supprime l'Update pour ne plus écraser la vitesse du levier
 
     public void SetSpeed(float newSpeed)
     {
-        currentSpeed = isPaused ? 0 : newSpeed;
+        // On stocke la vitesse demandée par le levier, même en pause
+        lastRequestedSpeed = newSpeed;
 
-        // On applique la vitesse physique à chaque tapis
-        foreach (TreadmillForce t in treadmills)
+        // Si on est en pause, on ignore la demande et on force tout à zéro
+        if (isPaused)
         {
-            if (t != null) t.SetSpeed(currentSpeed);
+            ApplyToHardware(0);
         }
-
-        // On applique la vitesse visuelle au tapis (shader)
-        if (treadmillMat != null)
+        else
         {
-            treadmillMat.SetFloat("_Speed", currentSpeed * MATERIAL_SPEED_MULTIPLIER);
+            ApplyToHardware(newSpeed);
         }
     }
 
     public void SetPaused(bool value)
     {
         isPaused = value;
-        // On rafraîchit la vitesse actuelle (0 si pause)
-        SetSpeed(currentSpeed);
+
+        if (isPaused)
+        {
+            ApplyToHardware(0); // Stop immédiat
+        }
+        else
+        {
+            ApplyToHardware(lastRequestedSpeed); // Reprise à la vitesse du levier
+        }
+    }
+
+    // Cette fonction interne s'occupe de l'exécution physique et visuelle
+    private void ApplyToHardware(float speed)
+    {
+        if (treadmills != null)
+        {
+            foreach (TreadmillForce t in treadmills)
+            {
+                if (t != null) t.SetSpeed(speed);
+            }
+        }
+
+        if (treadmillMat != null)
+        {
+            treadmillMat.SetFloat("_Speed", speed * MATERIAL_SPEED_MULTIPLIER);
+        }
     }
 }

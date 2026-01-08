@@ -6,42 +6,38 @@ public class LeverVitesse : MonoBehaviour
 {
     public float vitesseLente = 0.5f, vitesseMoyenne = 1.2f, vitesseRapide = 2.0f;
     public float forceCran = 20f;
-    public TreadmillForce[] allTreadmills;
     public TreadmillsController mainController;
 
     private HingeJoint hinge;
     private XRGrabInteractable grab;
+
+    // 0: Faible, 1: Moyenne, 2: Elevée, -1: Initialisation
+    private int derniereVitesse = -1;
 
     void Start()
     {
         hinge = GetComponent<HingeJoint>();
         grab = GetComponent<XRGrabInteractable>();
 
-        // On s'assure que le moteur est éteint au départ
+        // On s'assure que le moteur est éteint au départ pour permettre la saisie VR
         hinge.useMotor = false;
-
-        if (allTreadmills == null || allTreadmills.Length == 0)
-            allTreadmills = Object.FindObjectsByType<TreadmillForce>(FindObjectsSortMode.None);
     }
 
     void Update()
     {
         float angle = hinge.angle;
 
-        // Si on tient le levier, le moteur doit être éteint pour ne pas bloquer la main
+        // Gestion du moteur pour le calage
         if (grab.isSelected)
         {
-            hinge.useMotor = false;
+            hinge.useMotor = false; // Désactiver pour ne pas lutter contre la main
         }
         else
         {
-            // LOGIQUE DE CALAGE :
-            // Si le levier n'est pas déjà parfaitement sur un cran, on active le moteur
             float target = 0f;
             if (angle < -22f) target = -45f;
             else if (angle > 22f) target = 45f;
 
-            // Si on est à plus de 1 degré de la cible, on active le moteur pour "caler"
             if (Mathf.Abs(angle - target) > 1f)
             {
                 hinge.useMotor = true;
@@ -52,16 +48,41 @@ public class LeverVitesse : MonoBehaviour
             }
             else
             {
-                // Une fois calé, on coupe le moteur pour libérer la physique
                 hinge.useMotor = false;
             }
         }
 
-        // Mise à jour de la vitesse des tapis
+        // --- LOGIQUE DE VITESSE ET AFFICHAGE ---
         float speed = vitesseMoyenne;
-        if (angle < -20f) speed = vitesseLente;
-        else if (angle > 20f) speed = vitesseRapide;
+        int vitesseActuelle = 1;
+        string message = "Difficulté Moyenne";
 
+        if (angle < -22f)
+        {
+            speed = vitesseLente;
+            vitesseActuelle = 0;
+            message = "Difficulté Faible";
+        }
+        else if (angle > 22f)
+        {
+            speed = vitesseRapide;
+            vitesseActuelle = 2;
+            message = "Difficulté Élevée";
+        }
+
+        // Si la vitesse a changé depuis la dernière image
+        if (vitesseActuelle != derniereVitesse)
+        {
+            // Envoi au ScoreManager pour afficher la bulle
+            if (ScoreManager.instance != null)
+            {
+                ScoreManager.instance.ShowDifficulty(message);
+            }
+
+            derniereVitesse = vitesseActuelle;
+        }
+
+        // Mise à jour physique et visuelle des tapis
         if (mainController != null)
         {
             mainController.SetSpeed(speed);

@@ -1,76 +1,68 @@
 using UnityEngine;
-using System.Collections;
 using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Interactables; // Nécessaire pour détecter le grab
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class EmergencyHandle : MonoBehaviour
 {
     [Header("Paramètres")]
     public float threshold = 0.15f;
     public float pauseDuration = 5f;
-    public float stretchMultiplier = 10f;
-    public float maxScaleY = 2.0f;
+    public float forceRetour = 50f; // Force quand on lâche
 
     [Header("Références")]
     public TreadmillsController controller;
     public RandomSpawner spawner;
 
+    private ConfigurableJoint joint;
+    private XRGrabInteractable grab;
     private Vector3 initialLocalPos;
-    private Vector3 initialScale;
-    private bool triggerActivated = false;
-    private bool isGrabbed = false; // Pour savoir si on tient l'objet
-    private Rigidbody rb;
-    private XRGrabInteractable interactable;
+    private bool isExecuting = false;
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        joint = GetComponent<ConfigurableJoint>();
+        grab = GetComponent<XRGrabInteractable>();
         initialLocalPos = transform.localPosition;
-        initialScale = transform.localScale;
-
-        // Configuration auto des références
-        interactable = GetComponent<XRGrabInteractable>();
-        if (interactable != null)
-        {
-            interactable.selectEntered.AddListener(x => isGrabbed = true);
-            interactable.selectExited.AddListener(x => isGrabbed = false);
-        }
-
-        if (controller == null)
-            controller = Object.FindFirstObjectByType<TreadmillsController>();
-
-        if (spawner == null)
-            spawner = Object.FindFirstObjectByType<RandomSpawner>();
     }
 
     void Update()
     {
-        if (triggerActivated) return;
+        // On vérifie la distance d'étirement
+        float distance = Vector3.Distance(transform.localPosition, initialLocalPos);
 
-        float pullDistance = Mathf.Abs(transform.localPosition.y - initialLocalPos.y);
-
-        // Si on tire, on étire
-        if (isGrabbed)
+        if (grab != null && grab.isSelected)
         {
-            float newScaleY = Mathf.Min(initialScale.y + (pullDistance * stretchMultiplier), maxScaleY);
-            transform.localScale = new Vector3(initialScale.x, newScaleY, initialScale.z);
-
-            if (pullDistance >= threshold)
-            {
-                StartCoroutine(TriggerEmergencyAndReset());
-            }
+            // PENDANT QU'ON TIRE : 
+            // On baisse le ressort mais on ne le met pas à 0 pour garder une petite tension
+            SetSpringForce(5f);
         }
-        // Si on lâche et que l'urgence n'est pas active, on remet à zéro
-        else if (transform.localScale != initialScale)
+        else
         {
-            ResetHandle();
+            // QUAND ON LÂCHE :
+            // On remet la force pour qu'il revienne en place
+            SetSpringForce(forceRetour);
+        }
+
+        // Détection de l'activation
+        if (distance > threshold && !isExecuting)
+        {
+            StartCoroutine(EmergencyStopRoutine());
         }
     }
 
-    IEnumerator TriggerEmergencyAndReset()
+    void SetSpringForce(float force)
     {
-        triggerActivated = true;
+        if (joint != null)
+        {
+            JointDrive drive = joint.yDrive;
+            drive.positionSpring = force;
+            joint.yDrive = drive;
+        }
+    }
 
+    System.Collections.IEnumerator EmergencyStopRoutine()
+    {
+        isExecuting = true;
         if (controller != null) controller.SetPaused(true);
         if (spawner != null) spawner.StopSpawning();
 
@@ -78,19 +70,6 @@ public class EmergencyHandle : MonoBehaviour
 
         if (controller != null) controller.SetPaused(false);
         if (spawner != null) spawner.StartSpawning();
-
-        ResetHandle();
-        triggerActivated = false;
-    }
-
-    void ResetHandle()
-    {
-        // On coupe temporairement la physique pour replacer l'objet sans collision violente
-        if (rb != null) rb.isKinematic = true;
-
-        transform.localScale = initialScale;
-        transform.localPosition = initialLocalPos;
-
-        if (rb != null) rb.isKinematic = false;
+        isExecuting = false;
     }
 }

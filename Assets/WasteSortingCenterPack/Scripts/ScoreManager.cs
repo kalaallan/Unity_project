@@ -1,15 +1,30 @@
 using UnityEngine;
-using TMPro; // Important pour utiliser TextMeshPro
+using TMPro;
+using System.Collections; // Nécessaire pour les Coroutines
 
 public class ScoreManager : MonoBehaviour
 {
-    public static ScoreManager instance; // Permet aux autres scripts d'y accéder facilement
+    public static ScoreManager instance;
     public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI difficultyText; // Glisse ton nouveau texte ici
     private int score = 0;
 
-    void Awake()
+    void Awake() { instance = this; }
+
+    public void ShowDifficulty(string message)
     {
-        instance = this;
+        StopAllCoroutines(); // Arrête l'ancienne notification si on change vite
+        StartCoroutine(DisplayRoutine(message));
+    }
+
+    IEnumerator DisplayRoutine(string message)
+    {
+        difficultyText.text = message;
+        difficultyText.gameObject.SetActive(true);
+
+        yield return new WaitForSeconds(2f); // Temps d'affichage (2 secondes)
+
+        difficultyText.gameObject.SetActive(false);
     }
 
     public void AjouterPoint()
