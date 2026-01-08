@@ -5,16 +5,14 @@ public class GameLauncher : MonoBehaviour
     public GameObject menuCanvas;
     public TreadmillsController treadmillController;
     public RandomSpawner spawner;
+    public TimerManager timerManager; // Référence au gestionnaire de temps
 
     void Start()
     {
-        // On s'assure que le temps s'écoule (Time.timeScale = 1) 
-        // pour que les manettes et rayons bougent normalement
         Time.timeScale = 1f;
 
         if (menuCanvas != null) menuCanvas.SetActive(true);
 
-        // On stoppe les machines et la génération
         if (treadmillController != null)
         {
             treadmillController.SetPaused(true);
@@ -22,7 +20,6 @@ public class GameLauncher : MonoBehaviour
         }
         if (spawner != null) spawner.StopSpawning();
 
-        // On fige les objets déjà sur le tapis pour qu'ils ne tombent pas
         FreezeObjects(true);
     }
 
@@ -30,13 +27,29 @@ public class GameLauncher : MonoBehaviour
     {
         if (menuCanvas != null) menuCanvas.SetActive(false);
 
-        // On libère la physique des objets
         FreezeObjects(false);
 
         if (treadmillController != null) treadmillController.SetPaused(false);
         if (spawner != null) spawner.StartSpawning();
 
-        Debug.Log("Le jeu commence via manettes VR !");
+        // On lance le compte à rebours
+        if (timerManager != null) timerManager.StartTimer();
+
+        Debug.Log("Le jeu commence !");
+    }
+
+    // Nouvelle fonction pour tout stopper à la fin du temps
+    public void StopGame()
+    {
+        if (treadmillController != null)
+        {
+            treadmillController.SetPaused(true);
+            treadmillController.SetSpeed(0);
+        }
+        if (spawner != null) spawner.StopSpawning();
+
+        FreezeObjects(true);
+        Debug.Log("Temps écoulé, jeu arrêté.");
     }
 
     void FreezeObjects(bool freeze)
@@ -45,7 +58,7 @@ public class GameLauncher : MonoBehaviour
         foreach (GameObject g in spawned)
         {
             Rigidbody rb = g.GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = freeze; // isKinematic fige l'objet sans arrêter le temps
+            if (rb != null) rb.isKinematic = freeze;
         }
     }
 }
