@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameLauncher : MonoBehaviour
 {
@@ -60,5 +61,14 @@ public class GameLauncher : MonoBehaviour
             Rigidbody rb = g.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = freeze;
         }
+    }
+
+    public void RejouerLeJeu()
+    {
+        // Cette ligne recharge la scène active
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        // On s'assure que le temps reprend normalement au cas où il était figé
+        Time.timeScale = 1f;
     }
 }
